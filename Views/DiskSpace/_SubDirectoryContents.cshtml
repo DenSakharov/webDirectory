@@ -1,0 +1,35 @@
+﻿@model List<FileSystemItem>
+
+<div class="sub-directory-contents">
+    @foreach (var item in Model)
+    {
+        <div class="sub-directory-item" style="padding-left: @(item.Level * 20)px;">
+            <span class="sub-directory-icon">@((item.IsDirectory) ? (item.IsOpen ? "📂" : "📁") : "📄")</span>
+            <span>@item.Name</span>
+        </div>
+        @if (item.IsDirectory && item.IsOpen)
+        {
+            <div class="sub-items @(item.IsOpen ? "open" : "")" data-path="@item.Path">
+                <!-- Вложенное содержимое директории -->
+                @await Html.PartialAsync("_SubDirectoryContents", item.SubItems)
+            </div>
+        }
+    }
+</div>
+
+<style>
+    /* Стили для содержимого поддиректории */
+    .sub-directory-contents {
+        margin-top: 10px;
+        border-left: 2px solid #3498db;
+        padding-left: 10px;
+    }
+
+    .sub-directory-item {
+        margin-top: 5px;
+    }
+
+    .sub-directory-icon {
+        margin-right: 5px;
+    }
+</style>

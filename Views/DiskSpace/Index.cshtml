@@ -1,0 +1,155 @@
+﻿@model List<FileSystemItem>
+
+@functions {
+    string FormatBytes(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+
+        return $"{size:0.##} {sizes[order]}";
+    }
+}
+
+<div class="disk-space-chart">
+    @foreach (var item in Model)
+    {
+        <div class="chart-bar">
+            <div class="bar-label">
+                @if (item.IsDirectory)
+                {
+                    <a href="javascript:void(0);" class="directory-link" data-path="@item.Path">@item.Name</a>
+                }
+                else
+                {
+                    @item.Name
+                }
+            </div>
+            <div class="bar" style="width: @(item.Size / 1024)px;"></div>
+            <div class="bar-value">
+                @FormatBytes(item.Size)
+            </div>
+            @if (item.IsDirectory)
+            {
+                <div class="sub-item @(item.IsOpen ? "open" : "")" data-parent="@item.Name">
+                    @if (item.IsOpen && item.SubItems != null)
+                    {
+                        @foreach (var subItem in item.SubItems)
+                        {
+                            <div class="chart-bar">
+                                <div class="bar-label">
+                                    @if (subItem.IsDirectory)
+                                    {
+                                        <a href="javascript:void(0);" class="directory-link" data-path="@subItem.Path">@subItem.Name</a>
+                                    }
+                                    else
+                                    {
+                                        @subItem.Name
+                                    }
+                                </div>
+                                <div class="bar" style="width: @(subItem.Size / 1024)px;"></div>
+                                <div class="bar-value">
+                                    @FormatBytes(subItem.Size)
+                                </div>
+                                @if (subItem.IsDirectory)
+                                {
+                                    <div class="sub-item @(subItem.IsOpen ? "open" : "")" data-parent="@subItem.Name">
+                                        <!-- Рекурсивное отображение вложенных элементов -->
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div id="subDirectoryContents">
+    <!-- Сюда будет загружаться содержимое поддиректории -->
+</div>
+
+<div class="pagination">
+    @if ((int)ViewData["CurrentPage"] > 1)
+    {
+        <a href="@Url.Action("Index", new { page = (int)ViewData["CurrentPage"] - 1, pageSize = (int)ViewData["PageSize"] })">Previous</a>
+    }
+
+    @for (int i = 1; i <= (int)ViewData["TotalPages"]; i++)
+    {
+        <a href="@Url.Action("Index", new { page = i, pageSize = (int)ViewData["PageSize"] })" @(i == (int)ViewData["CurrentPage"] ? "class=current-page" : "")>@i</a>
+    }
+
+    @if ((int)ViewData["CurrentPage"] < (int)ViewData["TotalPages"])
+    {
+        <a href="@Url.Action("Index", new { page = (int)ViewData["CurrentPage"] + 1, pageSize = (int)ViewData["PageSize"] })">Next</a>
+    }
+</div>
+
+<style>
+    /* Стили для полосы */
+    .chart-bar {
+        display: flex;
+        align-items: center;
+    }
+
+    .bar-label {
+        flex: 1;
+    }
+
+    .bar-value {
+        width: 100px;
+    }
+
+    /* Стили для пагинации */
+    .pagination {
+        margin-top: 20px;
+    }
+
+        .pagination a {
+            margin-right: 10px;
+        }
+
+    .current-page {
+        font-weight: bold;
+    }
+
+    /* Стили для директорий */
+    .sub-item {
+        display: none;
+    }
+
+        .sub-item.open {
+            display: block;
+        }
+</style>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('.directory-link').on('click', function () {
+            var subItems = $(this).closest('.chart-bar').find('.sub-item');
+            var isOpen = subItems.hasClass('open');
+            subItems.toggleClass('open', !isOpen);
+
+            if (!isOpen) {
+                var directoryPath = $(this).data('path');
+                loadSubDirectoryContents(directoryPath, subItems);
+            }
+        });
+    });
+
+    function loadSubDirectoryContents(directoryPath, targetElement) {
+        var url = '@Url.Action("SubDirectoryContents")' + '?directoryPath=' + encodeURIComponent(directoryPath);
+
+        $.get(url, function (data) {
+            $(targetElement).html(data);
+        });
+    }
+</script>
